@@ -1,31 +1,46 @@
-var express = require("express");
-var app = express();
+import express from "express";
+import request from "request";
+import { Request, Response } from "express";
 
-app.get("/weather", function (req: any, res: any) {
-  const { serviceKey, numOfRows, pageNo, base_date, base_time, nx, ny } =
-    req.query;
+const app = express();
 
-  var api_url =
-    "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?";
-  var request = require("request");
-  var options = {
+app.get("/weather", (req: Request, res: Response) => {
+  const { serviceKey, numOfRows = "10", pageNo = "1" } = req.query;
+
+  const now = new Date();
+  now.setHours(now.getHours() - 1);
+  const base_date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const base_time = now.getHours().toString().padStart(2, "0") + "00";
+
+  const nx = 60;  // 평택 서정동
+  const ny = 127;
+
+  const api_url = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
+  const options = {
     url: api_url,
-    qs: { serviceKey, numOfRows, pageNo, base_date, base_time, nx, ny },
+    qs: {
+      serviceKey: serviceKey as string,
+      numOfRows,
+      pageNo,
+      base_date,
+      base_time,
+      nx,
+      ny,
+      dataType: "XML",
+    },
   };
 
-  request.get(options, function (error: any, response: any, body: any) {
-    if (!error && response.statusCode == 200) {
-      res.writeHead(200, { "Content-Type": "application/xml;charset=utf-8" });
-      res.end(body);
+  request.get(options, (error, response, body) => {
+    if (!error && response.statusCode === 200) {
+      res.setHeader("Content-Type", "application/xml;charset=utf-8");
+      res.send(body);
     } else {
-      res.status(response.statusCode).end();
-      console.log("error = " + response.statusCode);
+      res.status(response?.statusCode || 500).send("오류 발생");
+      console.error("❌ 에러:", error || response?.statusCode);
     }
   });
 });
 
-app.listen(3000, function () {
-  console.log(
-    "http://127.0.0.1:3000/weather?serviceKey=내 인증키&numOfRows=10&pageNo=1&base_date=20241028&base_time=0600&nx=61&ny=125 app listening on port 3000!"
-  );
+app.listen(3000, () => {
+  console.log("✅ 서버 실행됨: http://localhost:3000/weather?serviceKey=JbcTKpI%2BOiV%2BSTSRjAS16syKEn%2F21%2B%2F8fo1XW3J3BF6yGeGrYEmk7MIFx4fx3z1PTgqZOmw72YsPOqxq1girvw%3D%3D&numOfRows=10&pageNo=1");
 });
